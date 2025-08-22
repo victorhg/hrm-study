@@ -34,6 +34,21 @@ def generate_sudoku_solution_field(sample_size: int, difficulty: float) -> dict:
     
     return dataset
 
+def load_sudoku_data(data_path: str, max_samples: int = 1000):
+    # Load the dictionary that was saved
+    data = np.load(data_path, allow_pickle=True).item()
+ 
+    puzzles = []
+    solutions = []
+
+    # Extract puzzles and solutions from the dictionary
+    for i in range(min(max_samples, len(data))):
+        if i in data:
+            puzzles.append(data[i]["puzzle"])
+            solutions.append(data[i]["solution"])
+
+    return np.array(puzzles), np.array(solutions)
+
 
 def create_dataset(config: DataProcessConfig):
     print("Generating Sudoku puzzles...")
@@ -41,11 +56,12 @@ def create_dataset(config: DataProcessConfig):
 
     # shuffle dataset
     dataset_shuffled = dataset #{k: dataset[k] for k in np.random.permutation(len(dataset))}
+    keys = list(dataset_shuffled.keys())
 
     # split and save
     split_train = int(len(dataset) * config.split)
-    train_set = {k: dataset_shuffled[k] for k in list(dataset_shuffled)[:split_train]}
-    test_set = {k: dataset_shuffled[k] for k in list(dataset_shuffled)[split_train:]}
+    train_set = {k: dataset_shuffled[k] for k in keys[:split_train]}
+    test_set = {i: dataset_shuffled[k] for i, k in enumerate(keys[split_train:])}
 
     np.save(os.path.join(config.output_dir, "sudoku_train.npy"), train_set)
     np.save(os.path.join(config.output_dir, "sudoku_test.npy"), test_set)
