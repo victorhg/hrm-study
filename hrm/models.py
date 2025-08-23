@@ -15,6 +15,9 @@ class ModelConfig(pydantic.BaseModel):
 
 
 
+# NOT BEING USED 
+# model now uses TransformerBlock and MultiheadedAttention
+
 class Attention(nn.Module):
     def __init__(self, hidden_dim: int):
         super().__init__()

@@ -8,6 +8,11 @@ import os
 import pydantic 
 
 from typing import Optional, Tuple
+
+from hrm.models import RecurrentModule
+from hrm.transformer import TransformerModule
+
+
 # ####################
 # HierarchicalReasoningModel
  # added to ensure HRMConfig is defined successfully
@@ -34,7 +39,24 @@ class HierarchicalReasoningModel(nn.Module):
 
         # Input projection (project puzzle embedding dim -> hidden)
         self.input_proj = nn.Linear(config.input_dim, config.hidden_dim)
+        
+        self.High_net = TransformerModule(
+            input_dim=self.config.hidden_dim,
+            num_layers=self.config.num_layers,
+            hidden_dim=self.config.hidden_dim,
+            num_heads=8,
+            dropout=self.config.dropout
+        )
 
+        self.Low_net = TransformerModule(
+            input_dim=self.config.hidden_dim,
+            num_layers=self.config.num_layers,
+            hidden_dim=self.config.hidden_dim,
+            num_heads=8,
+            dropout=self.config.dropout
+        )
+
+        """
         self.High_net = RecurrentModule(
             input_dim=self.config.hidden_dim,  # Use hidden_dim, not input_dim
             num_layers=self.config.num_layers,
@@ -48,6 +70,7 @@ class HierarchicalReasoningModel(nn.Module):
             hidden_dim=self.config.hidden_dim,
             dropout=self.config.dropout
         )
+        """
 
         # Combine and project to latent (hrm latent == output_dim)
         self.layer_norm = nn.LayerNorm(self.config.hidden_dim * 2)  # added
