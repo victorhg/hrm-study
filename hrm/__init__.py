@@ -20,6 +20,30 @@ class ModelConfig(pydantic.BaseModel):
     weight_decay: float = 1.0
 
 
+class Attention(nn.Module):
+    def __init__(self, hidden_dim: int):
+        super().__init__()
+        self.hidden_dim = hidden_dim
+        self.query = nn.Linear(hidden_dim, hidden_dim)
+        self.key = nn.Linear(hidden_dim, hidden_dim)
+        self.value = nn.Linear(hidden_dim, hidden_dim)
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (B, S, C)
+        queries = self.query(x)
+        keys = self.key(x)
+        values = self.value(x)
+
+        # Compute attention scores
+        scores = torch.bmm(queries, keys.transpose(1, 2)) / self.hidden_dim ** 0.5
+        attn_weights = self.softmax(scores)
+
+        # Apply attention weights to values
+        context = torch.bmm(attn_weights, values)
+        return context
+
+
 class RecurrentModule(nn.Module):
     def __init__(
         self, 
@@ -32,6 +56,8 @@ class RecurrentModule(nn.Module):
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
+
+        self.attention = Attention(hidden_dim)
 
         # going with lstm to simplify understanding 
         self.lstm = nn.LSTM(input_size=input_dim, 
@@ -57,8 +83,10 @@ class RecurrentModule(nn.Module):
             hidden = (h0, c0)
 
         layer_out, hidden = self.lstm(x, hidden)
-        output = self.projection(layer_out)
-        # should add attention?
+
+        output = self.attention(layer_out)
+        
+        output = self.projection(output)
 
         output = self.layer_norm(output + x)
         return output
