@@ -1,5 +1,14 @@
 
 
+class ModelConfig(pydantic.BaseModel):
+    learning_rate: float = 0.001
+    batch_size: int = 32
+    max_epochs: int = 200
+    embeddings_lr: float = 0.001
+    weight_decay: float = 1.0
+
+
+
 class Attention(nn.Module):
     def __init__(self, hidden_dim: int):
         super().__init__()
