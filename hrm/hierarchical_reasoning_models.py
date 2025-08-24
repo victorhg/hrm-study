@@ -9,8 +9,14 @@ import pydantic
 
 from typing import Optional, Tuple
 
-from hrm.models import RecurrentModule
 from hrm.transformer import TransformerModule
+
+class ModelConfig(pydantic.BaseModel):
+    learning_rate: float = 0.001
+    batch_size: int = 32
+    max_epochs: int = 200
+    embeddings_lr: float = 0.001
+    weight_decay: float = 1.0
 
 
 # ####################
@@ -44,7 +50,7 @@ class HierarchicalReasoningModel(nn.Module):
             input_dim=self.config.hidden_dim,
             num_layers=self.config.num_layers,
             hidden_dim=self.config.hidden_dim,
-            num_heads=16,
+            num_heads=4,
             dropout=self.config.dropout
         )
 
@@ -52,13 +58,13 @@ class HierarchicalReasoningModel(nn.Module):
             input_dim=self.config.hidden_dim,
             num_layers=self.config.num_layers,
             hidden_dim=self.config.hidden_dim,
-            num_heads=16,
+            num_heads=4,
             dropout=self.config.dropout
         )
 
 
         # Combine and project to latent (hrm latent == output_dim)
-        self.layer_norm = nn.LayerNorm(self.config.hidden_dim * 2)  # added
+        self.layer_norm = nn.LayerNorm(self.config.hidden_dim)  # added
         self.output_proj = nn.Linear(config.hidden_dim, config.output_dim)
 
         # Projections
@@ -94,11 +100,9 @@ class HierarchicalReasoningModel(nn.Module):
         else:
             batch_size, seq_len, _ = input_tensor.shape
         
-        # Project input to hidden dimension
         input_tensor = self.input_proj(input_tensor)  # (B, 81, hidden_dim)
         #print(f"After input projection: {input_tensor.shape}")
         
-        # Initialize hidden states if not provided
         if hidden_states is None:
             high_level_state, low_level_state = self.initialize_hidden_states(batch_size, seq_len)
         else:
@@ -123,7 +127,8 @@ class HierarchicalReasoningModel(nn.Module):
             high_level_state, low_level_state, input_tensor, self.High_net, self.high_level_proj
         )
 
-        # Project high-level state to output classes
+        high_level_state = self.layer_norm(high_level_state)
+
         output = self.output_proj(high_level_state)  # (B, 81, output_dim)
         #print(f"Final output shape: {output.shape}")
         
