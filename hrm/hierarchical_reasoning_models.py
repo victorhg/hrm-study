@@ -44,7 +44,7 @@ class HierarchicalReasoningModel(nn.Module):
             input_dim=self.config.hidden_dim,
             num_layers=self.config.num_layers,
             hidden_dim=self.config.hidden_dim,
-            num_heads=8,
+            num_heads=16,
             dropout=self.config.dropout
         )
 
@@ -52,25 +52,10 @@ class HierarchicalReasoningModel(nn.Module):
             input_dim=self.config.hidden_dim,
             num_layers=self.config.num_layers,
             hidden_dim=self.config.hidden_dim,
-            num_heads=8,
+            num_heads=16,
             dropout=self.config.dropout
         )
 
-        """
-        self.High_net = RecurrentModule(
-            input_dim=self.config.hidden_dim,  # Use hidden_dim, not input_dim
-            num_layers=self.config.num_layers,
-            hidden_dim=self.config.hidden_dim,
-            dropout=self.config.dropout
-        )
-
-        self.Low_net = RecurrentModule(
-            input_dim=self.config.hidden_dim,  # Use hidden_dim, not input_dim
-            num_layers=self.config.num_layers,
-            hidden_dim=self.config.hidden_dim,
-            dropout=self.config.dropout
-        )
-        """
 
         # Combine and project to latent (hrm latent == output_dim)
         self.layer_norm = nn.LayerNorm(self.config.hidden_dim * 2)  # added
