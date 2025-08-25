@@ -1,4 +1,5 @@
 import os
+import hrm
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -65,15 +66,15 @@ class HRMTrainer:
         
         for batch in loader:
             puzzles, solutions = batch["puzzle"], batch["solution"]
-            puzzles = puzzles.to(self.device).float()
+            puzzles = puzzles.to(self.device)
             solutions = solutions.to(self.device).long()
             
             if train:
                 self.optimizer.zero_grad()
 
             # Forward pass - add unsqueeze to make input 3D
-            if puzzles.dim() == 2:
-                puzzles = puzzles.unsqueeze(-1)  # (B, 81) -> (B, 81, 1)
+            #if puzzles.dim() == 2:
+            #    puzzles = puzzles.unsqueeze(-1)  # (B, 81) -> (B, 81, 1)
             
             model_output = self.model(puzzles)
             
@@ -86,16 +87,19 @@ class HRMTrainer:
             solutions_flat = solutions.view(-1)               # (B*81,)
             
             loss = self.criterion(output_flat, solutions_flat)
+            constraint_loss = hrm.constraint_violation_loss(model_output, puzzles.squeeze(-1))
+            total_loss = loss + 0.5 * constraint_loss 
             
+
             preds = output_flat.argmax(dim=-1)  # (B*81,)
             acc = (preds == solutions_flat).float().mean().item()  # Both same shape now
 
             if train:
-                loss.backward()
+                total_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
                 self.optimizer.step()
 
-            epoch_loss += loss.item()
+            epoch_loss += total_loss.item()
             epoch_acc += acc
             total_batches += 1
                 

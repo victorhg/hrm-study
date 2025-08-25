@@ -14,3 +14,10 @@ Feel free to suggest and improve upon this project. Would love to hear from folk
 Example command line:
 
 `python dataset/build_dataset.py --output-dir ./data --sample-size 10000 --difficulty 7`
+
+
+Done now:
+
+- [ x ] implement embedding representations for input, digit and position
+- [ x ] improve loss functions to identify sudoku errors 
+- [ ] 

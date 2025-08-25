@@ -116,7 +116,7 @@ class SudokuDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         return {
             'puzzle': torch.tensor(self.puzzles[idx], dtype=torch.float32),
-            'solution': torch.tensor(self.solutions[idx], dtype=torch.float32)
+            'solution': torch.tensor(self.solutions[idx], dtype=torch.long)
         }
     
 

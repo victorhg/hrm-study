@@ -44,8 +44,12 @@ class HierarchicalReasoningModel(nn.Module):
         # Define model layers here
 
         # Input projection (project puzzle embedding dim -> hidden)
-        self.input_proj = nn.Linear(config.input_dim, config.hidden_dim)
-        
+        self.input_proj =  nn.Identity() #nn.Linear(config.input_dim, config.hidden_dim)
+
+        # embedding for sudoku 
+        self.digit_embedding = nn.Embedding(10, config.hidden_dim // 2)
+        self.position_embedding = nn.Embedding(81, config.hidden_dim // 2)
+
         self.High_net = TransformerModule(
             input_dim=self.config.hidden_dim,
             num_layers=self.config.num_layers,
@@ -93,16 +97,21 @@ class HierarchicalReasoningModel(nn.Module):
 
     def forward(self, input_tensor, hidden_states=None):
         # Handle both 2D and 3D inputs
-        if input_tensor.dim() == 2:
-            batch_size, seq_len = input_tensor.shape
-            # Add feature dimension: (B, 81) -> (B, 81, 1)
+        if input_tensor.dim() == 3:
+            #batch_size, seq_len = input_tensor.shape
+            # ensure (B, 81)
             input_tensor = input_tensor.unsqueeze(-1)
-        else:
-            batch_size, seq_len, _ = input_tensor.shape
         
-        input_tensor = self.input_proj(input_tensor)  # (B, 81, hidden_dim)
+        batch_size, seq_len = input_tensor.shape
+        
+        #input_tensor = self.input_proj(input_tensor)  # (B, 81, hidden_dim)
         #print(f"After input projection: {input_tensor.shape}")
-        
+        digit_embeds = self.digit_embedding(input_tensor.long())  # (B, 81, hidden_dim//2)
+        positions = torch.arange(0, 81, device=self.device).unsqueeze(0).expand(batch_size,-1 )
+        position_embeds = self.position_embedding(positions)  # (B, 81, hidden_dim//2)
+
+        combined = torch.cat([digit_embeds, position_embeds], dim=-1)  # (B, 81, hidden_dim)
+
         if hidden_states is None:
             high_level_state, low_level_state = self.initialize_hidden_states(batch_size, seq_len)
         else:
@@ -111,21 +120,24 @@ class HierarchicalReasoningModel(nn.Module):
         with torch.no_grad():
             for step in range(self.total_steps - 1):
                 low_level_state = self.level_step(
-                    low_level_state, high_level_state, input_tensor, self.Low_net, self.low_level_proj
+                    low_level_state, high_level_state, combined, self.Low_net, self.low_level_proj
                 )
 
                 if(step + 1) % self.T == 0:
                     high_level_state = self.level_step(
-                        high_level_state, low_level_state, input_tensor, self.High_net, self.high_level_proj
+                        high_level_state, low_level_state, combined, self.High_net, self.high_level_proj
                     )
 
-        # 1 step with gradient
-        low_level_state = self.level_step(
-            low_level_state, high_level_state, input_tensor, self.Low_net, self.low_level_proj
-        )
+        # last step with gradient
+        for t in range(self.T):
+            low_level_state = self.level_step(
+                low_level_state, high_level_state, combined, self.Low_net, self.low_level_proj
+            )
+
         high_level_state = self.level_step(
-            high_level_state, low_level_state, input_tensor, self.High_net, self.high_level_proj
-        )
+                high_level_state, low_level_state, combined, self.High_net, self.high_level_proj
+            )
+        
 
         high_level_state = self.layer_norm(high_level_state)
 
