@@ -39,7 +39,6 @@ class HRMTrainer:
         self.best_model_state = None
         self.epochs_without_improvement = 0
         
-        # Early stopping params
         self.patience = 15
         
         # Create results directory
