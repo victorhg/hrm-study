@@ -1,5 +1,16 @@
 import torch
+import torch.nn as nn
 
+class SudokuConstraintLoss(nn.Module):
+    def __init__(self, constraint_weight: float = 0.5):
+        super().__init__()
+        self.ce_loss = nn.CrossEntropyLoss()
+        self.constraint_weight = constraint_weight
+
+    def forward(self, logits: torch.Tensor, puzzles: torch.Tensor) -> torch.Tensor:
+        ce_loss = self.ce_loss(logits, puzzles)
+        constraint_loss = constraint_violation_loss(logits, puzzles.squeeze(-1))
+        return ce_loss + self.constraint_weight * constraint_loss
 
 def constraint_violation_loss(logits, puzzles):
     """

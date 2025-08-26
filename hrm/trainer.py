@@ -1,5 +1,6 @@
 import os
 import hrm
+from hrm.loss import SudokuConstraintLoss
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -21,12 +22,14 @@ class HRMTrainer:
         self.model.to(self.device)
         
         # Training components
-        self.criterion = nn.CrossEntropyLoss()
+        self.criterion = nn.CrossEntropyLoss()#SudokuConstraintLoss(constraint_weight=0.7)
+        
         self.optimizer = optim.Adam(
             list(self.model.parameters()),
             lr=self.config.learning_rate,
             weight_decay=self.config.weight_decay
         )
+        self.warmup_epochs = 5
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer, mode='min', factor=0.5, patience=5
         )
@@ -72,14 +75,8 @@ class HRMTrainer:
             if train:
                 self.optimizer.zero_grad()
 
-            # Forward pass - add unsqueeze to make input 3D
-            #if puzzles.dim() == 2:
-            #    puzzles = puzzles.unsqueeze(-1)  # (B, 81) -> (B, 81, 1)
-            
             model_output = self.model(puzzles)
-            
-
-            
+             
             # Calculate loss based on output dimensions
             batch_size, seq_len, num_classes = model_output.shape
 
@@ -114,6 +111,12 @@ class HRMTrainer:
 
         for epoch in range(1, epochs + 1):
             train_loss, train_acc = self._run_epoch(train_loader, train=True)
+
+            # warmup learning rate
+            lr = self.config.learning_rate * min(1.0, epoch / self.warmup_epochs)
+            for param_group in self.optimizer.param_groups:
+                param_group['lr'] = lr
+
             self.train_losses.append(train_loss)
             self.train_accuracies.append(train_acc)
 

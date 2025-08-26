@@ -4,6 +4,7 @@ from typing import Optional
 import os
 import numpy as np
 from tqdm import tqdm
+
 import sudoku as sudoku
 
 from argdantic import ArgParser
@@ -23,11 +24,12 @@ def generate_sudoku_solution_field(sample_size: int, difficulty: float) -> dict:
     # 2. create sample_size base examples with config.difficulty
   
     dataset = dict()
-    for puzzle_ID in tqdm(range(sample_size)):
-        solution = np.array(sudoku.build_board())
-        puzzle = np.array(sudoku.generate_puzzle(solution, difficulty=(difficulty/10)))
-        dataset[puzzle_ID] = {
-            "id": puzzle_ID,
+    for diff in tqdm(range(1, difficulty), desc=f"Generating Sudoku puzzles up to {difficulty}"):  
+        for puzzle_ID in tqdm(range(sample_size//difficulty), desc=f"Difficulty {diff}"):
+            solution = np.array(sudoku.build_board())
+            puzzle = np.array(sudoku.generate_puzzle(solution, difficulty=(diff/10)))
+            dataset[puzzle_ID] = {
+                "id": puzzle_ID,
             "puzzle": puzzle.flatten(),
             "solution": solution.flatten()
         }
